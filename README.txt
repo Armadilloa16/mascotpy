@@ -26,3 +26,4 @@ TODO:
 	the .tex into a .pdf
  - Add an index to keep track of indentation 
 	(semi-)automatically.
+ - Implement use of templates.
