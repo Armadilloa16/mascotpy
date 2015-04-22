@@ -85,11 +85,21 @@ def main(argv):
     print "includePepSummary:\t", includePepSummary
     print
     
+    # Attempt to read inputfile and write outputfile,
+    # given maxHits minProteinProb and includePepSummary.
+    dat2tex(inputfile,outputfile,maxHits,minProteinProb,includePepSummary)
     
-    
-    
-    
-    
+ 
+
+
+
+
+
+def dat2tex(inputfile,outputfile,maxHits=50,minProteinProb=0.05,includePepSummary=False):
+
+    if not __name__ == "__main__":
+        print "Hahahahaha"
+        return 2
     
     resfile = msparser.ms_mascotresfile(inputfile)
     params = resfile.params()
