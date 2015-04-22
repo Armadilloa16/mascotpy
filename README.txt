@@ -18,4 +18,3 @@ TODO:
 	called from main()
  - Add an index to keep track of indentation 
 	(semi-)automatically.
-- Implment `exit earlier' mentality.
