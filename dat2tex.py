@@ -73,21 +73,25 @@ def main(argv):
         return 2
     # If no outputfile provided, use the same name of the input file.
     if outputfile == '':
-        outputfile = inputfile
+        outputfile = inputfile+".tex"
+    inputfile = inputfile+".dat"
 
     # Let the user know whats up.
     print "MASCOTpyLaTeX Operating Parameters:"
-    print "Input File:\t\t", inputfile+".dat"
-    print "Output File:\t\t", outputfile+".tex"
+    print "Input File:\t\t", inputfile
+    print "Output File:\t\t", outputfile
     print "maxNhits:\t\t", maxHits
     print "minProb:\t\t", minProteinProb
     print "includePepSummary:\t", includePepSummary
     print
-
-
-
-
-    resfile = msparser.ms_mascotresfile(inputfile+".dat")
+    
+    
+    
+    
+    
+    
+    
+    resfile = msparser.ms_mascotresfile(inputfile)
     params = resfile.params()
 
     if not resfile.isValid():
@@ -115,7 +119,7 @@ def main(argv):
         )
 
     # Write output .tex file.
-    with open(outputfile+".tex","w") as tex:
+    with open(outputfile,"w") as tex:
 
         # Preamble
         tex.write("\\documentclass{article}\n\n\n"\
