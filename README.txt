@@ -1,7 +1,7 @@
 Author: Lyron Juan Winderbaum
 Date  : 26/3/2015
 
-I wrote MASCOTpyLaTeX in order to extract useful 
+I wrote dat2tex in order to extract useful 
 information from a mascot search result (.dat) 
 file, and print it out in a .tex file to be 
 compiled into a pretty LaTeX pdf. :)
