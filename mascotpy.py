@@ -51,7 +51,7 @@ def main(argv):
     if opts.o is None:
         opts.o = ifile+'.tex'
 
-`   # Let the user know whats up.
+    # Let the user know whats up.
     print "mascotpy parameters:"
     print "--------------------"
     print "Input File:         ", opts.i
