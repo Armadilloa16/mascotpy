@@ -9,7 +9,7 @@
 ##############################################################################
 
 import msparser
-import os, sys, getopt
+import os, sys, optparse
 
 # Makes appropriate adjustments a string argument so it can be correctly
 # represented in LaTeX.
@@ -24,70 +24,46 @@ def latexSafe(S):
 
 def main(argv):
 
-    inputfile = ''
-    outputfile = ''
-    maxHits = 50
-    minProteinProb = 0.05
-    includePepSummary = False
     # Parse commandline options
     print
-    try:
-        opts, args = getopt.getopt(argv,"ho:N:P:s",["help","ofile=","maxNprot=","minProb=","summary"])
-    except getopt.GetoptError as e:
-        print 'Error parsing options:'
-        print e.msg
-        return 2
-    for opt, arg in opts:
-        if opt in ("-h","--help") :
-            print "Help documentation"
-            return 0
-        elif opt in ("-o","--ofile"):
-            outputfile, fileExtension = os.path.splitext(arg)
-            if fileExtension not in ("",".tex") :
-                print "Invalid File extension on output file ", fileExtension
-                print "Writing to ", outputfile, ".tex instead."
-        elif opt in ("-N","--maxNprot"):
-            try:
-                maxHits = int(arg)
-            except ValueError as e:
-                print "Error in option maxNprot:"
-                print e
-                return 2
-        elif opt in ("-P","--minProb"):
-            try:
-                minProteinProb = float(arg)
-            except ValueError as e:
-                print "Error in option minProb:"
-                print e
-                return 2
-        elif opt in ("-s","--summary"):
-            includePepSummary = True
-    # Parse inputfile
-    if len(args) > 0:
-        inputfile, fileExtension = os.path.splitext(args[0])
-        if fileExtension not in ("",".dat"):
-            print "Invalid File extension on input file '"+fileExtension+"'"
-            print "Attempting to find", inputfile+".dat instead.\n"
-    else :
-        print "Error: No input file provided."
-        return 2
-    # If no outputfile provided, use the same name of the input file.
-    if outputfile == '':
-        outputfile = inputfile+".tex"
-    inputfile = inputfile+".dat"
+    parser = optparse.OptionParser()
+    parser.add_option('-i','--inputfile',dest='i',
+                      help="Filename to read mascot MS/MS search results from (.dat)")
+    parser.add_option('-o','--outputfile',dest='o',
+                      help="Filename to write result too (.tex)")
+    parser.add_option('-n','--max-n-proteins',action="store",dest="n",
+                      default=50,type="int",help="Max number of proteins to include")
+    parser.add_option('-p','--min-probability',action="store",dest="p",
+                      default=0.05,type="float",help="Minimum probability to include")
+    parser.add_option('-s','--peptide-summary',action="store_true",dest="s",
+                      default=False,help="Include peptide summary as well")
+    opts, args = parser.parse_args(argv)
+    # Check input file is provided extension is `.dat'
+    if opts.i is None:
+        parser.error('input file not given')
+    ifile, fext = os.path.splitext(opts.i)
+    if fext not in ('.dat',""):
+        opts.i = ifile+'.dat'
+        print 'warning: invalid file extension', fext
+        print '         attempting to read', ifile+'.dat', 'instead.'
+        print
+    # If output file is not provided default to input filename
+    if opts.o is None:
+        opts.o = ifile+'.tex'
 
-    # Let the user know whats up.
-    print "MASCOTpyLaTeX Operating Parameters:"
-    print "Input File:\t\t", inputfile
-    print "Output File:\t\t", outputfile
-    print "maxNhits:\t\t", maxHits
-    print "minProb:\t\t", minProteinProb
-    print "includePepSummary:\t", includePepSummary
+`   # Let the user know whats up.
+    print "mascotpy parameters:"
+    print "--------------------"
+    print "Input File:         ", opts.i
+    print "Output File:        ", opts.o
+    print "max # of proetins:  ", opts.n
+    print "min probability:    ", opts.p
+    print "includePepSummary:  ", opts.s
     print
     
     # Attempt to read inputfile and write outputfile,
     # given maxHits minProteinProb and includePepSummary.
-    dat2tex(inputfile,outputfile,maxHits,minProteinProb,includePepSummary)
+    dat2tex(opts.i,opts.o,opts.n,opts.p,opts.s)
     
  
 
@@ -95,7 +71,7 @@ def main(argv):
 
 
 
-def dat2tex(inputfile,outputfile='',maxHits=50,minProteinProb=0.05,includePepSummary=False):
+def dat2tex(inputfile,outputfile=None,maxHits=50,minProteinProb=0.05,includePepSummary=False):
 
     # Parse input parameters.
     if not __name__ == "__main__":
@@ -104,7 +80,7 @@ def dat2tex(inputfile,outputfile='',maxHits=50,minProteinProb=0.05,includePepSum
             print "Invalid File extension on input file '"+fileExtension+"'"
             print "Attempting to find", inputfile+".dat instead.\n"
         # If no output file was specified use the input filename (.tex)
-        if outputfile == '':
+        if outputfile is None:
             outputfile = inputfile+".tex"
         inputfile = inputfile+".dat"
         try:
