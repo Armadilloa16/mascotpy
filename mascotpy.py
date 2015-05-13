@@ -38,15 +38,19 @@ def main(argv):
     parser.add_option('-s','--peptide-summary',action="store_true",dest="s",
                       default=False,help="Include peptide summary as well")
     opts, args = parser.parse_args(argv)
-    # Check input file is provided extension is `.dat'
+    # Check input file is provided
     if opts.i is None:
         parser.error('input file not given')
+    # and check that if it has a file extension, it is `.dat'
     ifile, fext = os.path.splitext(opts.i)
     if fext not in ('.dat',""):
         opts.i = ifile+'.dat'
         print 'warning: invalid file extension', fext
         print '         attempting to read', ifile+'.dat', 'instead.'
         print
+    elif fext == "":
+        opts.i = ifile+'.dat'
+        
     # If output file is not provided default to input filename
     if opts.o is None:
         opts.o = ifile+'.tex'
@@ -146,7 +150,10 @@ def dat2tex(inputfile,outputfile=None,maxHits=50,minProteinProb=0.05,includePepS
                   +"\\begin{center}\n"
                   +"  {\\Huge "+latexSafe(params.getCOM())+"}\n"
                   +"\\end{center}\n\n")
-        # MASCOT Search Parameters
+
+
+        
+        # MASCOT Search Parameters -- template
         t = Template("\\vspace{2cm}\n"
                      +"\\begin{center}\n"
                      +"  {\\Large MASCOT Search Parameters}\n"
@@ -162,11 +169,22 @@ def dat2tex(inputfile,outputfile=None,maxHits=50,minProteinProb=0.05,includePepS
                      +"{% endif %} \\\\\n"
                      +2*"  " + "Fixed Modifications :\n"
                      +"{% for mod in fixed_mods %}"
-                     +4*"  " + "& " + mod + " \\\\\n"
+                     +4*"  " + "& {{ mod }} \\\\\n"
                      +"{% empty %}
                      +4*"  " + "& \\\\\n"
-                     +"{% endfor %}")
-
+                     +"{% endfor %}"
+                     +2*"  " + "Variable Modifications :\n"
+                     +"{% for mod in variable_mods %}"
+                     +4*"  " + "& {{ mod }} \\\\\n"
+##                     +"{% empty %}
+##                     +4*"  " + "& \\\\\n"
+                     +"{% endfor %}"
+                     +2*"  " + "MS Mass Tolerance : & {{ ms_tol }} \\\\\n"
+                     +2*"  " + "MS/MS Mass Tolerance : & {{ msms_tol }} \\\\\n"
+                     +"  " + "\\end{longtable}\n"
+                     +"\\end{center}\n\n"
+                     )
+        # MASCOT Search Parameters -- context
         # - remove any preceeding dots '. . .' from taxonomy name
         dot_loc = params.getTAXONOMY()[::-1].find(".")
         if dot_loc != -1:
@@ -175,28 +193,23 @@ def dat2tex(inputfile,outputfile=None,maxHits=50,minProteinProb=0.05,includePepS
             tax_name = params.getTAXONOMY()
         mods_fixed = params.getMODS().split(",")
         for i in range(len(mods_fixed)):
-            mods_fixed[i] = latexSafe(mods_fixed[i]
-            
-        
+            mods_fixed[i] = latexSafe(mods_fixed[i])
+        mods_variable = params.getIT_MODS().split(",")
+        for i in range(len(mods_variable)):
+            mods_variable[i] = latexSafe(mods_variable[i])
         c = Context({'db_name': latexSafe(params.getDB()),
                      'taxonomy': latexSafe(tax_name),
                      'enzyme': latexSafe(params.getCLE()),
                      'n_cleavages': params.getPFA(),
-                     'fixed_mods': mods_fixed})
-
+                     'fixed_mods': mods_fixed,
+                     'variable_mods': mods_variable,
+                     'ms_tol': str(params.getTOL())+" "+params.getTOLU(),
+                     'msms_tol': str(params.getITOL())+" "+params.getITOLU()})
+        # MASCOT Search Parameters -- write
+        tex.write(t.render(c))
         
-        # - variable modifications
-        tex.write(2*"  " + "Variable Modifications :")
-        mods_variable = params.getIT_MODS().split(",")
-        extra_ws = 1
-        for mod in mods_variable:
-            tex.write(extra_ws*" " + "& " + latexSafe(mod) + " \\\\\n")
-            extra_ws = 2*2 + 25
-        # - mass tolerances
-        tex.write(2*"  " + "MS Mass Tolerance : & {0} {1} \\\\\n".format(params.getTOL(),params.getTOLU()) \
-                  + 2*"  " + "MS/MS Mass Tolerance : & {0} {1} \\\\\n".format(params.getITOL(),params.getITOLU()) \
-                  + "  " + "\\end{longtable}\n" \
-                  + "\\end{center}\n\n")
+
+
 
         # Protein Summary
         tex.write("\\pagebreak\n"\
