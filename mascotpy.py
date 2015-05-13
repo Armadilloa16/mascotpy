@@ -37,6 +37,8 @@ def main(argv):
                       default=0.05,type="float",help="Minimum probability to include")
     parser.add_option('-s','--peptide-summary',action="store_true",dest="s",
                       default=False,help="Include peptide summary as well")
+    parser.add_option('-c','--csv',action="store_true",dest="c",
+                      default=False,help="Exports .csv Protein (Peptide if -s) summary instead of .tex")
     opts, args = parser.parse_args(argv)
     # Check input file is provided
     if opts.i is None:
@@ -53,7 +55,10 @@ def main(argv):
         
     # If output file is not provided default to input filename
     if opts.o is None:
-        opts.o = ifile+'.tex'
+        if opts.c:
+            opts.o = ifile+'.csv'
+        else:
+            opts.o = ifile+'.tex'
 
     # Let the user know whats up.
     print "mascotpy parameters:"
@@ -63,11 +68,15 @@ def main(argv):
     print "max # of proetins:  ", opts.n
     print "min probability:    ", opts.p
     print "includePepSummary:  ", opts.s
+    print "write csv:          ", opts.c
     print
     
     # Attempt to read inputfile and write outputfile,
     # given maxHits minProteinProb and includePepSummary.
-    dat2tex(opts.i,opts.o,opts.n,opts.p,opts.s)
+    if opts.c:
+        dat2csv(opts.i,opts.o,opts.n,opts.p,opts.s)
+    else:
+        dat2tex(opts.i,opts.o,opts.n,opts.p,opts.s)
     
  
 
@@ -170,8 +179,8 @@ def dat2tex(inputfile,outputfile=None,maxHits=50,minProteinProb=0.05,includePepS
                      +2*"  " + "Fixed Modifications :\n"
                      +"{% for mod in fixed_mods %}"
                      +4*"  " + "& {{ mod }} \\\\\n"
-                     +"{% empty %}
-                     +4*"  " + "& \\\\\n"
+##                     +"{% empty %}
+##                     +4*"  " + "& \\\\\n"
                      +"{% endfor %}"
                      +2*"  " + "Variable Modifications :\n"
                      +"{% for mod in variable_mods %}"
@@ -334,6 +343,136 @@ def dat2tex(inputfile,outputfile=None,maxHits=50,minProteinProb=0.05,includePepS
         tex.write("\\end{document}")
 
 
+
+
+
+def dat2csv(inputfile,outputfile=None,maxHits=50,minProteinProb=0.05,includePepSummary=False):
+
+    import csv
+    
+    # Parse input parameters.
+    if not __name__ == "__main__":
+        inputfile, fileExtension = os.path.splitext(inputfile)
+        if not fileExtension == ".dat":
+            print "Invalid File extension on input file '"+fileExtension+"'"
+            print "Attempting to find", inputfile+".dat instead.\n"
+        # If no output file was specified use the input filename (.csv)
+        if outputfile is None:
+            outputfile = inputfile+".csv"
+        inputfile = inputfile+".dat"
+        try:
+            maxHits = int(maxHits)
+        except ValueError as e:
+            print "Exception in parameter maxNprot:"
+            print e
+            return 2
+        try:
+            minProteinProb = float(minProteinProb)
+        except ValueError as e:
+            print "Exception in parameter minProb:"
+            print e
+            return 2
+        try:
+            minProteinProb = bool(includePepSummary)
+        except ValueError as e:
+            print "Exception in parameter includePepSummary:"
+            print e
+            return 2
+    
+    resfile = msparser.ms_mascotresfile(inputfile)
+    params = resfile.params()
+
+    if not resfile.isValid():
+        print "Cannot process file '%s':" % inputfile
+        print resfile.getLastErrorString()
+        return 2
+
+    if not resfile.isMSMS():
+        print ".dat file '%s' is not an MS/MS search:" % inputfile
+        return 2
+
+    flags = msparser.ms_mascotresults.MSRES_GROUP_PROTEINS \
+        | msparser.ms_mascotresults.MSRES_SHOW_SUBSETS \
+        | msparser.ms_mascotresults.MSRES_DUPE_REMOVE_A \
+        | msparser.ms_mascotresults.MSRES_DUPE_REMOVE_B \
+        | msparser.ms_mascotresults.MSRES_DUPE_REMOVE_C \
+        | msparser.ms_mascotresults.MSRES_DUPE_REMOVE_D \
+        | msparser.ms_mascotresults.MSRES_DUPE_REMOVE_E \
+        | msparser.ms_mascotresults.MSRES_DUPE_REMOVE_F
+
+    minIonsScore = 0
+    minPepLenInPepSummary = 0
+    results = msparser.ms_peptidesummary(
+        resfile, flags, minProteinProb, maxHits, "", minIonsScore, minPepLenInPepSummary
+        )
+
+    # Write output .csv file.
+    with open(outputfile,"w") as ofile:
+        writer = csv.writer(ofile)
+        
+        if includePepSummary:
+            # Peptide Summary
+            writer.writerow( ("Accession",
+                              "Description",
+                              "PeptideSequence",
+                              "VariableModifications",
+                              "Score",
+                              "IdentityThreshold",
+                              "HomologyThreshold") )
+            hit  = 1
+            prot = results.getHit(hit)
+            while prot:
+                accession = prot.getAccession()
+                description = results.getProteinDescription(accession)
+                num_peps = prot.getNumPeptides()
+                for i in range(1, 1+num_peps):
+                    q = prot.getPeptideQuery(i)
+                    p = prot.getPeptideP(i)
+                    if p == -1 or q == -1:
+                        continue
+                    pep = results.getPeptide(q, p)
+                    if not pep:
+                        continue
+                    writer.writerow( (accession,
+                                      description,
+                                      pep.getPeptideStr(),
+                                      results.getReadableVarMods(q, pep.getRank()),
+                                      "{0:.1f}".format(pep.getIonsScore()),
+                                      "{0:.1f}".format(results.getPeptideThreshold(q,1/minProteinProb,1,msparser.ms_mascotresults.TT_IDENTITY)),
+                                      "{0:.1f}".format(results.getPeptideThreshold(q,1/minProteinProb,1,msparser.ms_mascotresults.TT_HOMOLOGY))
+                                      ) )
+                                      
+                hit += 1
+                prot = results.getHit(hit)
+                
+        else:
+            # Protein Summary
+            writer.writerow( ("Accession",
+                              "Description",
+                              "MW(kDa)",
+                              "IDs",
+                              "Score",
+                              "Coverage",
+                              "emPAI") )
+            hit  = 1
+            prot = results.getHit(hit)
+            while prot:
+                accession = prot.getAccession()
+                writer.writerow( (accession,
+                                  results.getProteinDescription(accession),
+                                  "{0:.2f}".format(results.getProteinMass(accession)/1000),
+                                  "{0}".format(prot.getNumPeptides()),
+                                  "{0:.2f}".format(prot.getScore()),
+                                  "{0}".format(prot.getCoverage()),
+                                  "{0:.2f}".format(results.getProteinEmPAI(accession))) )
+                hit += 1
+                prot = results.getHit(hit)
+        
+
+
+
+
+        
 
 
 
