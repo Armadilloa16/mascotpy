@@ -61,15 +61,15 @@ def main(argv):
             opts.o = ifile+'.tex'
 
     # Let the user know whats up.
-    print "mascotpy parameters:"
-    print "--------------------"
-    print "Input File:         ", opts.i
-    print "Output File:        ", opts.o
-    print "max # of proetins:  ", opts.n
-    print "min probability:    ", opts.p
-    print "includePepSummary:  ", opts.s
-    print "write csv:          ", opts.c
-    print
+##    print "mascotpy parameters:"
+##    print "--------------------"
+##    print "Input File:         ", opts.i
+##    print "Output File:        ", opts.o
+##    print "max # of proetins:  ", opts.n
+##    print "min probability:    ", opts.p
+##    print "includePepSummary:  ", opts.s
+##    print "write csv:          ", opts.c
+##    print
     
     # Attempt to read inputfile and write outputfile,
     # given maxHits minProteinProb and includePepSummary.
