@@ -5,6 +5,9 @@ I wrote mascotpy in order to extract useful
 information from a mascot search result (.dat) 
 file, and print it out in a .tex file to be 
 compiled into a pretty LaTeX pdf. :)
+It can instead print out the information to 
+a .csv as well via the -c option in order to
+allow easier post-processing.
 
 testingDriver is a simple script for testing 
 use of mascotpy as a module, as opposed to 
