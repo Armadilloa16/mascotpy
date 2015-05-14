@@ -23,10 +23,3 @@ system you are running (linux/windows), and
 depending on if you are running a 32/64bit 
 system. It can be downloaded from the Matrix 
 Science website.
-
-TODO:
- - Add an option to call a subprocess and compile 
-	the .tex into a .pdf
- - Add an index to keep track of indentation 
-	(semi-)automatically.
- - Implement use of templates.

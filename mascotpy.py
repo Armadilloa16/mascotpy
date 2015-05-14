@@ -86,10 +86,6 @@ def main(argv):
 
 def dat2tex(inputfile,outputfile=None,maxHits=50,minProteinProb=0.05,includePepSummary=False):
 
-    from django.template import Template, Context
-    from django.conf import settings
-    settings.configure()
-    
     # Parse input parameters.
     if not __name__ == "__main__":
         inputfile, fileExtension = os.path.splitext(inputfile)
@@ -154,71 +150,58 @@ def dat2tex(inputfile,outputfile=None,maxHits=50,minProteinProb=0.05,includePepS
                   +"\\usepackage[landscape,margin=2cm]{geometry}\n"
                   +"\\usepackage{multicol}\n"
                   +"\\usepackage{longtable}\n\n\n")
+        
         # Document begin, title.
         tex.write("\\begin{document}\n\n"
                   +"\\begin{center}\n"
                   +"  {\\Huge "+latexSafe(params.getCOM())+"}\n"
                   +"\\end{center}\n\n")
 
-
-        
-        # MASCOT Search Parameters -- template
-        t = Template("\\vspace{2cm}\n"
-                     +"\\begin{center}\n"
-                     +"  {\\Large MASCOT Search Parameters}\n"
-                     +"\\end{center}\n"
-                     +"\\begin{center}\n"
-                     +"\t\\begin{longtable}{rl}\n"
-                     +2*"  " + "Database : & {{ db_name }} \\\\\n"
-                     +2*"  " + "Taxonomy : & {{ taxonomy }} \\\\\n"
-                     +2*"  " + "Enzyme : & {{ enzyme }} "
-                     +"{% if n_cleavages == 0 %}(no missed cleavages)"
-                     +"{% elif n_cleavages == 1 %}(up to one missed cleavage)"
-                     +"{% else %}(up to {{ n_cleaveages }} missed cleavages)"
-                     +"{% endif %} \\\\\n"
-                     +2*"  " + "Fixed Modifications :\n"
-                     +"{% for mod in fixed_mods %}"
-                     +4*"  " + "& {{ mod }} \\\\\n"
-##                     +"{% empty %}
-##                     +4*"  " + "& \\\\\n"
-                     +"{% endfor %}"
-                     +2*"  " + "Variable Modifications :\n"
-                     +"{% for mod in variable_mods %}"
-                     +4*"  " + "& {{ mod }} \\\\\n"
-##                     +"{% empty %}
-##                     +4*"  " + "& \\\\\n"
-                     +"{% endfor %}"
-                     +2*"  " + "MS Mass Tolerance : & {{ ms_tol }} \\\\\n"
-                     +2*"  " + "MS/MS Mass Tolerance : & {{ msms_tol }} \\\\\n"
-                     +"  " + "\\end{longtable}\n"
-                     +"\\end{center}\n\n"
-                     )
-        # MASCOT Search Parameters -- context
-        # - remove any preceeding dots '. . .' from taxonomy name
+        # MASCOT Search Parameters
+        tex.write("\\vspace{2cm}\n"\
+                  +"\\begin{center}\n"\
+                  +"  {\\Large MASCOT Search Parameters}\n"\
+                  +"\\end{center}\n"\
+                  +"\\begin{center}\n"\
+                  +"\t\\begin{longtable}{rl}\n")
+        # - database
+        tex.write(2*"  " + "Database : & " + latexSafe(params.getDB()) + " \\\\\n")
+        # - taxonomy (remove preceeding dots '. . .')
         dot_loc = params.getTAXONOMY()[::-1].find(".")
         if dot_loc != -1:
             tax_name = params.getTAXONOMY()[(len(params.getTAXONOMY())-dot_loc):]
         else:
             tax_name = params.getTAXONOMY()
+        tex.write(2*"  " + "Taxonomy : & " + latexSafe(tax_name) + " \\\\\n")
+        # - enzyme (missed cleavages)
+        enz_name = params.getCLE()
+        n_missed_cleave = params.getPFA()
+        if n_missed_cleave == 0:
+            cleave_sentence = "no missed cleavages"
+        elif n_missed_cleave == 1:
+            cleave_sentence = "up to " + str(n_missed_cleave) + " missed cleavage"
+        else:
+            cleave_sentence = "up to " + str(n_missed_cleave) + " missed cleavages"
+        tex.write(2*"  " + "Enzyme : & "+ latexSafe(enz_name) + " (" + cleave_sentence + ") \\\\\n")
+        # - fixed modifications
+        tex.write(2*"  " + "Fixed Modifications :")
         mods_fixed = params.getMODS().split(",")
-        for i in range(len(mods_fixed)):
-            mods_fixed[i] = latexSafe(mods_fixed[i])
+        extra_ws = 1
+        for mod in mods_fixed:
+            tex.write(extra_ws*" " + "& " + latexSafe(mod) + " \\\\\n")
+            extra_ws = 2*2 + 22
+        # - variable modifications
+        tex.write(2*"  " + "Variable Modifications :")
         mods_variable = params.getIT_MODS().split(",")
-        for i in range(len(mods_variable)):
-            mods_variable[i] = latexSafe(mods_variable[i])
-        c = Context({'db_name': latexSafe(params.getDB()),
-                     'taxonomy': latexSafe(tax_name),
-                     'enzyme': latexSafe(params.getCLE()),
-                     'n_cleavages': params.getPFA(),
-                     'fixed_mods': mods_fixed,
-                     'variable_mods': mods_variable,
-                     'ms_tol': str(params.getTOL())+" "+params.getTOLU(),
-                     'msms_tol': str(params.getITOL())+" "+params.getITOLU()})
-        # MASCOT Search Parameters -- write
-        tex.write(t.render(c))
-        
-
-
+        extra_ws = 1
+        for mod in mods_variable:
+            tex.write(extra_ws*" " + "& " + latexSafe(mod) + " \\\\\n")
+            extra_ws = 2*2 + 25
+        # - mass tolerances
+        tex.write(2*"  " + "MS Mass Tolerance : & {0} {1} \\\\\n".format(params.getTOL(),params.getTOLU()) \
+                  + 2*"  " + "MS/MS Mass Tolerance : & {0} {1} \\\\\n".format(params.getITOL(),params.getITOLU()) \
+                  + "  " + "\\end{longtable}\n" \
+                  + "\\end{center}\n\n")
 
         # Protein Summary
         tex.write("\\pagebreak\n"\
